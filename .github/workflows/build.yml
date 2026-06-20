@@ -1,0 +1,66 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build WASM plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust target
+        run: rustup target add wasm32-wasip1
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Check default build
+        run: cargo check --locked
+
+      - name: Check debug-log build
+        run: cargo check --locked --features debug-logs
+
+      - name: Build release WASM
+        run: cargo build --locked --release --target wasm32-wasip1
+
+      - name: Prepare release artifact
+        run: |
+          cp target/wasm32-wasip1/release/zmux-scroll.wasm zmux-scroll.wasm
+          sha256sum zmux-scroll.wasm > zmux-scroll.wasm.sha256
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zmux-scroll-wasm
+          path: |
+            zmux-scroll.wasm
+            zmux-scroll.wasm.sha256
+
+      - name: Publish GitHub release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" zmux-scroll.wasm zmux-scroll.wasm.sha256 \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" zmux-scroll.wasm zmux-scroll.wasm.sha256 \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes
+          fi
