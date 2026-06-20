@@ -10,7 +10,6 @@ struct ZmuxScroll {
     scrolled_panes: HashSet<PaneId>,
     cur_mode: InputMode,
     cur_pane: Option<PaneId>,
-    suppress_next_normal_clear_for: Option<PaneId>,
     panes: PaneManifest,
     active_tab: Option<usize>,
 }
@@ -221,7 +220,6 @@ impl ZmuxScroll {
             self.scrolled_panes.insert(pane_id);
             self.cur_pane = Some(pane_id);
             self.cur_mode = InputMode::Scroll;
-            self.suppress_next_normal_clear_for = Some(pane_id);
             switch_to_input_mode(&InputMode::Scroll);
             focus_terminal_pane(terminal_id, false, false);
         }
@@ -240,15 +238,7 @@ impl ZmuxScroll {
         if let Some(pane_id) = self.cur_pane {
             eprintln!("mode switch {:?} - {}", self.cur_mode, pane_id);
             if mode == InputMode::Scroll {
-                self.suppress_next_normal_clear_for = None;
                 self.scrolled_panes.insert(pane_id);
-            } else if self.suppress_next_normal_clear_for == Some(pane_id) {
-                eprintln!(
-                    "ignoring trailing normal-mode switch for restored pane {}",
-                    pane_id
-                );
-                self.suppress_next_normal_clear_for = None;
-                self.cur_mode = InputMode::Scroll;
             } else {
                 self.scrolled_panes.remove(&pane_id);
             }
@@ -275,7 +265,6 @@ impl ZmuxScroll {
             }
         } else if self.scrolled_panes.contains(&pane_id) {
             self.cur_mode = InputMode::Scroll;
-            self.suppress_next_normal_clear_for = Some(pane_id);
             switch_to_input_mode(&InputMode::Scroll);
         }
 
