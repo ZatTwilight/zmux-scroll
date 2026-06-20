@@ -184,15 +184,7 @@ impl ZellijPlugin for ZmuxScroll {
                 false
             }
             Event::UserAction(action, _client_id, _terminal_id, _) => {
-                debug_log!(
-                    self,
-                    "scrolled panes: {}",
-                    self.scrolled_panes
-                        .iter()
-                        .map(|p| p.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                );
+                self.debug_print_panes();
                 if let Some(action) = classify_action(&action) {
                     self.handle_custom_action(action);
                 }
@@ -293,5 +285,28 @@ impl ZmuxScroll {
         }
 
         self.active_tab
+    }
+
+    fn debug_print_panes(&self) {
+        debug_log!(
+            self,
+            "scrolled panes: {}",
+            self.scrolled_panes
+                .iter()
+                .map(|p| {
+                    let mut panes = self.panes.panes.iter().flat_map(|p| p.1);
+                    let pane = panes.find(|y| {
+                        let id = if y.is_plugin {
+                            PaneId::Plugin(y.id)
+                        } else {
+                            PaneId::Terminal(y.id)
+                        };
+                        &id == p
+                    });
+                    pane.map(|p| p.title.clone()).unwrap_or_else(|| p.to_string())
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
     }
 }
