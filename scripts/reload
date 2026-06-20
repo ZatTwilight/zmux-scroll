@@ -10,15 +10,14 @@ plugin_dir="${ZELLIJ_PLUGIN_DIR:-$HOME/.config/zellij/plugins}"
 plugin_path="$plugin_dir/$plugin_name.wasm"
 build_artifact="target/$target/release/$plugin_name.wasm"
 
-cargo build --release --target "$target"
+cargo_build=(cargo build --release --target "$target")
+if [[ "${ZMUX_SCROLL_DEBUG:-}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
+  cargo_build+=(--features debug-logs)
+fi
+
+"${cargo_build[@]}"
 
 mkdir -p "$plugin_dir"
 cp "$build_artifact" "$plugin_path"
 
-zellij_args=(action start-or-reload-plugin)
-if [[ "${ZMUX_SCROLL_DEBUG:-}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
-  zellij_args+=(--configuration debug=true)
-fi
-zellij_args+=("file:$plugin_path")
-
-zellij "${zellij_args[@]}"
+zellij action start-or-reload-plugin "file:$plugin_path"

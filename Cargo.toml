@@ -5,6 +5,10 @@ edition = "2021"
 license = "MIT"
 description = "A Zellij plugin that tracks scroll mode per terminal pane."
 
+[features]
+default = []
+debug-logs = []
+
 [dependencies]
 zellij-tile = "0.44.3"
 zellij-utils = "0.44.3"

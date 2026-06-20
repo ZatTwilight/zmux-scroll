@@ -3,17 +3,20 @@ use std::collections::{BTreeMap, HashSet};
 use zellij_tile::prelude::{actions::Action, *};
 use zellij_utils::position::Position;
 
+#[cfg(feature = "debug-logs")]
 macro_rules! debug_log {
-    ($plugin:expr, $($arg:tt)*) => {
-        if $plugin.debug {
-            eprintln!("zmux-scroll: {}", format_args!($($arg)*));
-        }
+    ($($arg:tt)*) => {
+        eprintln!("zmux-scroll: {}", format_args!($($arg)*));
     };
+}
+
+#[cfg(not(feature = "debug-logs"))]
+macro_rules! debug_log {
+    ($($arg:tt)*) => {};
 }
 
 #[derive(Default)]
 struct ZmuxScroll {
-    debug: bool,
     permissions_granted: bool,
     status: String,
     scrolled_panes: HashSet<PaneId>,
@@ -61,19 +64,6 @@ fn pane_at_position(
             None
         }
     })
-}
-
-fn config_bool(configuration: &BTreeMap<String, String>, key: &str) -> bool {
-    configuration
-        .get(key)
-        .map(|value| {
-            let value = value.trim();
-            value == "1"
-                || value.eq_ignore_ascii_case("true")
-                || value.eq_ignore_ascii_case("yes")
-                || value.eq_ignore_ascii_case("on")
-        })
-        .unwrap_or(false)
 }
 
 fn classify_action(action: &Action) -> Option<CustomAction> {
@@ -146,8 +136,7 @@ fn classify_action(action: &Action) -> Option<CustomAction> {
 }
 
 impl ZellijPlugin for ZmuxScroll {
-    fn load(&mut self, configuration: BTreeMap<String, String>) {
-        self.debug = config_bool(&configuration, "debug");
+    fn load(&mut self, _configuration: BTreeMap<String, String>) {
         subscribe(&[
             EventType::PermissionRequestResult,
             EventType::PaneUpdate,
@@ -160,20 +149,20 @@ impl ZellijPlugin for ZmuxScroll {
             PermissionType::ReadApplicationState,
             PermissionType::OpenTerminalsOrPlugins,
         ]);
-        debug_log!(self, "loaded; requesting permissions");
+        debug_log!("loaded; requesting permissions");
         self.status = "zmux-scroll background plugin loaded".to_string();
     }
 
     fn update(&mut self, event: Event) -> bool {
         match event {
             Event::PermissionRequestResult(PermissionStatus::Granted) => {
-                debug_log!(self, "permissions granted");
+                debug_log!("permissions granted");
                 self.permissions_granted = true;
                 self.sync_focused_pane();
                 false
             }
             Event::PermissionRequestResult(PermissionStatus::Denied) => {
-                debug_log!(self, "permissions denied");
+                debug_log!("permissions denied");
                 self.permissions_granted = false;
                 self.status = "permissions denied".to_string();
                 false
@@ -191,7 +180,7 @@ impl ZellijPlugin for ZmuxScroll {
                 false
             }
             Event::ModeUpdate(m) => {
-                debug_log!(self, "mode update: {:?}", m.mode);
+                debug_log!("mode update: {:?}", m.mode);
                 self.handle_mode_switch(m.mode);
                 false
             }
@@ -202,7 +191,7 @@ impl ZellijPlugin for ZmuxScroll {
     fn pipe(&mut self, pipe_message: PipeMessage) -> bool {
         if let "reload" = pipe_message.name.as_str() {
             let plugin_id = get_plugin_ids().plugin_id;
-            debug_log!(self, "reloading plugin id {plugin_id}");
+            debug_log!("reloading plugin id {plugin_id}");
             reload_plugin_with_id(plugin_id);
         }
         false
@@ -233,6 +222,7 @@ impl ZmuxScroll {
         let pane_id = pane_at_position(&self.panes, tab, position.line(), position.column());
 
         if let Some(pane_id @ PaneId::Terminal(terminal_id)) = pane_id {
+            debug_log!("mouse scroll at {:?}; focusing {}", position, pane_id);
             self.scrolled_panes.insert(pane_id);
             self.cur_pane = Some(pane_id);
             self.cur_mode = InputMode::Scroll;
@@ -247,12 +237,9 @@ impl ZmuxScroll {
         }
         self.cur_mode = mode;
 
-        // Leaving scroll mode while focused on a tracked pane usually means "forget this pane".
-        // However, after we restore a pane by calling switch_to_input_mode(Scroll), Zellij can
-        // still emit a trailing SwitchToMode(Normal) from the focus/tab movement that got us here.
-        // Ignore exactly one such Normal for the restored pane.
+        // Leaving scroll mode while focused on a tracked pane means "forget this pane".
         if let Some(pane_id) = self.cur_pane {
-            debug_log!(self, "mode switch {:?} - {}", self.cur_mode, pane_id);
+            debug_log!("mode switch {:?} - {}", self.cur_mode, pane_id);
             if mode == InputMode::Scroll {
                 self.scrolled_panes.insert(pane_id);
             } else {
@@ -265,7 +252,7 @@ impl ZmuxScroll {
         let Ok((tab_position, pane_id)) = get_focused_pane_info() else {
             return self.active_tab;
         };
-        debug_log!(self, "got new focus: {} - {:?}", tab_position, pane_id);
+        debug_log!("got new focus: {} - {:?}", tab_position, pane_id);
 
         let previous_pane = self.cur_pane.replace(pane_id);
         self.active_tab = Some(tab_position);
@@ -277,9 +264,11 @@ impl ZmuxScroll {
             // When switching to non scrolled pane in scroll mode
             // leave scroll mode
             if !self.scrolled_panes.contains(&pane_id) {
+                debug_log!("focused untracked pane {}; switching to normal", pane_id);
                 switch_to_input_mode(&InputMode::Normal);
             }
         } else if self.scrolled_panes.contains(&pane_id) {
+            debug_log!("restoring scroll mode for {}", pane_id);
             self.cur_mode = InputMode::Scroll;
             switch_to_input_mode(&InputMode::Scroll);
         }
@@ -289,7 +278,6 @@ impl ZmuxScroll {
 
     fn debug_print_panes(&self) {
         debug_log!(
-            self,
             "scrolled panes: {}",
             self.scrolled_panes
                 .iter()
@@ -303,7 +291,8 @@ impl ZmuxScroll {
                         };
                         &id == p
                     });
-                    pane.map(|p| p.title.clone()).unwrap_or_else(|| p.to_string())
+                    pane.map(|p| p.title.clone())
+                        .unwrap_or_else(|| p.to_string())
                 })
                 .collect::<Vec<_>>()
                 .join(", ")

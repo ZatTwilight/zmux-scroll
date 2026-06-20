@@ -11,6 +11,12 @@ Additionally:
 cargo build --release --target wasm32-wasip1
 ```
 
+Build with debug logging compiled in:
+
+```sh
+cargo build --release --target wasm32-wasip1 --features debug-logs
+```
+
 The plugin artifact will be written to:
 
 ```text
@@ -46,10 +52,12 @@ Override the destination directory if needed:
 ZELLIJ_PLUGIN_DIR=/path/to/plugins ./scripts/reload
 ```
 
-Enable debug logging for a reload with:
+Build and reload with debug logging compiled in:
 
 ```sh
 ZMUX_SCROLL_DEBUG=1 ./scripts/reload
 ```
+
+Debug logging is a compile-time feature (`debug-logs`), not a runtime plugin configuration option.
 
 The plugin requests the Zellij permissions it needs on startup.
