@@ -26,4 +26,30 @@ zellij action start-or-reload-plugin \
   "file:$PWD/target/wasm32-wasip1/release/zmux-scroll.wasm"
 ```
 
+## Dev reload
+
+From inside a Zellij session, rebuild, copy to your local Zellij plugin directory, and reload:
+
+```sh
+./scripts/reload
+```
+
+By default this writes to:
+
+```text
+~/.config/zellij/plugins/zmux-scroll.wasm
+```
+
+Override the destination directory if needed:
+
+```sh
+ZELLIJ_PLUGIN_DIR=/path/to/plugins ./scripts/reload
+```
+
+Enable debug logging for a reload with:
+
+```sh
+ZMUX_SCROLL_DEBUG=1 ./scripts/reload
+```
+
 The plugin requests the Zellij permissions it needs on startup.

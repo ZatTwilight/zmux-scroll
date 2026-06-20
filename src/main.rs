@@ -3,8 +3,17 @@ use std::collections::{BTreeMap, HashSet};
 use zellij_tile::prelude::{actions::Action, *};
 use zellij_utils::position::Position;
 
+macro_rules! debug_log {
+    ($plugin:expr, $($arg:tt)*) => {
+        if $plugin.debug {
+            eprintln!("zmux-scroll: {}", format_args!($($arg)*));
+        }
+    };
+}
+
 #[derive(Default)]
 struct ZmuxScroll {
+    debug: bool,
     permissions_granted: bool,
     status: String,
     scrolled_panes: HashSet<PaneId>,
@@ -52,6 +61,19 @@ fn pane_at_position(
             None
         }
     })
+}
+
+fn config_bool(configuration: &BTreeMap<String, String>, key: &str) -> bool {
+    configuration
+        .get(key)
+        .map(|value| {
+            let value = value.trim();
+            value == "1"
+                || value.eq_ignore_ascii_case("true")
+                || value.eq_ignore_ascii_case("yes")
+                || value.eq_ignore_ascii_case("on")
+        })
+        .unwrap_or(false)
 }
 
 fn classify_action(action: &Action) -> Option<CustomAction> {
@@ -124,7 +146,8 @@ fn classify_action(action: &Action) -> Option<CustomAction> {
 }
 
 impl ZellijPlugin for ZmuxScroll {
-    fn load(&mut self, _configuration: BTreeMap<String, String>) {
+    fn load(&mut self, configuration: BTreeMap<String, String>) {
+        self.debug = config_bool(&configuration, "debug");
         subscribe(&[
             EventType::PermissionRequestResult,
             EventType::PaneUpdate,
@@ -137,20 +160,20 @@ impl ZellijPlugin for ZmuxScroll {
             PermissionType::ReadApplicationState,
             PermissionType::OpenTerminalsOrPlugins,
         ]);
-        eprintln!("zmux-scroll: loaded; requesting permissions");
+        debug_log!(self, "loaded; requesting permissions");
         self.status = "zmux-scroll background plugin loaded".to_string();
     }
 
     fn update(&mut self, event: Event) -> bool {
         match event {
             Event::PermissionRequestResult(PermissionStatus::Granted) => {
-                eprintln!("zmux-scroll: permissions granted");
+                debug_log!(self, "permissions granted");
                 self.permissions_granted = true;
                 self.sync_focused_pane();
                 false
             }
             Event::PermissionRequestResult(PermissionStatus::Denied) => {
-                eprintln!("zmux-scroll: permissions denied");
+                debug_log!(self, "permissions denied");
                 self.permissions_granted = false;
                 self.status = "permissions denied".to_string();
                 false
@@ -161,8 +184,9 @@ impl ZellijPlugin for ZmuxScroll {
                 false
             }
             Event::UserAction(action, _client_id, _terminal_id, _) => {
-                eprintln!(
-                    "Scrolled panes: {}",
+                debug_log!(
+                    self,
+                    "scrolled panes: {}",
                     self.scrolled_panes
                         .iter()
                         .map(|p| p.to_string())
@@ -175,7 +199,7 @@ impl ZellijPlugin for ZmuxScroll {
                 false
             }
             Event::ModeUpdate(m) => {
-                eprintln!("Mode update: {:?}", m.mode);
+                debug_log!(self, "mode update: {:?}", m.mode);
                 self.handle_mode_switch(m.mode);
                 false
             }
@@ -186,7 +210,7 @@ impl ZellijPlugin for ZmuxScroll {
     fn pipe(&mut self, pipe_message: PipeMessage) -> bool {
         if let "reload" = pipe_message.name.as_str() {
             let plugin_id = get_plugin_ids().plugin_id;
-            eprintln!("zmux-scroll: reloading plugin id {plugin_id}");
+            debug_log!(self, "reloading plugin id {plugin_id}");
             reload_plugin_with_id(plugin_id);
         }
         false
@@ -236,7 +260,7 @@ impl ZmuxScroll {
         // still emit a trailing SwitchToMode(Normal) from the focus/tab movement that got us here.
         // Ignore exactly one such Normal for the restored pane.
         if let Some(pane_id) = self.cur_pane {
-            eprintln!("mode switch {:?} - {}", self.cur_mode, pane_id);
+            debug_log!(self, "mode switch {:?} - {}", self.cur_mode, pane_id);
             if mode == InputMode::Scroll {
                 self.scrolled_panes.insert(pane_id);
             } else {
@@ -249,7 +273,7 @@ impl ZmuxScroll {
         let Ok((tab_position, pane_id)) = get_focused_pane_info() else {
             return self.active_tab;
         };
-        eprintln!("got new focus: {} - {:?}", tab_position, pane_id);
+        debug_log!(self, "got new focus: {} - {:?}", tab_position, pane_id);
 
         let previous_pane = self.cur_pane.replace(pane_id);
         self.active_tab = Some(tab_position);

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+plugin_name="zmux-scroll"
+target="${RUST_TARGET:-wasm32-wasip1}"
+plugin_dir="${ZELLIJ_PLUGIN_DIR:-$HOME/.config/zellij/plugins}"
+plugin_path="$plugin_dir/$plugin_name.wasm"
+build_artifact="target/$target/release/$plugin_name.wasm"
+
+cargo build --release --target "$target"
+
+mkdir -p "$plugin_dir"
+cp "$build_artifact" "$plugin_path"
+
+zellij_args=(action start-or-reload-plugin)
+if [[ "${ZMUX_SCROLL_DEBUG:-}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
+  zellij_args+=(--configuration debug=true)
+fi
+zellij_args+=("file:$plugin_path")
+
+zellij "${zellij_args[@]}"
