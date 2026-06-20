@@ -1,0 +1,10 @@
+[package]
+name = "muxscroll"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A Zellij plugin that tracks scroll mode per terminal pane."
+
+[dependencies]
+zellij-tile = "0.44.3"
+zellij-utils = "0.44.3"
