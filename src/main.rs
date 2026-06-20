@@ -4,7 +4,7 @@ use zellij_tile::prelude::{actions::Action, *};
 use zellij_utils::position::Position;
 
 #[derive(Default)]
-struct Muxscroll {
+struct ZmuxScroll {
     permissions_granted: bool,
     status: String,
     scrolled_panes: HashSet<PaneId>,
@@ -15,7 +15,7 @@ struct Muxscroll {
     active_tab: Option<usize>,
 }
 
-register_plugin!(Muxscroll);
+register_plugin!(ZmuxScroll);
 
 #[derive(Debug, Clone, Copy)]
 enum CustomAction {
@@ -124,7 +124,7 @@ fn classify_action(action: &Action) -> Option<CustomAction> {
     }
 }
 
-impl ZellijPlugin for Muxscroll {
+impl ZellijPlugin for ZmuxScroll {
     fn load(&mut self, _configuration: BTreeMap<String, String>) {
         subscribe(&[
             EventType::PermissionRequestResult,
@@ -138,20 +138,20 @@ impl ZellijPlugin for Muxscroll {
             PermissionType::ReadApplicationState,
             PermissionType::OpenTerminalsOrPlugins,
         ]);
-        eprintln!("muxscroll: loaded; requesting permissions");
-        self.status = "muxscroll background plugin loaded".to_string();
+        eprintln!("zmux-scroll: loaded; requesting permissions");
+        self.status = "zmux-scroll background plugin loaded".to_string();
     }
 
     fn update(&mut self, event: Event) -> bool {
         match event {
             Event::PermissionRequestResult(PermissionStatus::Granted) => {
-                eprintln!("muxscroll: permissions granted");
+                eprintln!("zmux-scroll: permissions granted");
                 self.permissions_granted = true;
                 self.sync_focused_pane();
                 false
             }
             Event::PermissionRequestResult(PermissionStatus::Denied) => {
-                eprintln!("muxscroll: permissions denied");
+                eprintln!("zmux-scroll: permissions denied");
                 self.permissions_granted = false;
                 self.status = "permissions denied".to_string();
                 false
@@ -187,7 +187,7 @@ impl ZellijPlugin for Muxscroll {
     fn pipe(&mut self, pipe_message: PipeMessage) -> bool {
         if let "reload" = pipe_message.name.as_str() {
             let plugin_id = get_plugin_ids().plugin_id;
-            eprintln!("muxscroll: reloading plugin id {plugin_id}");
+            eprintln!("zmux-scroll: reloading plugin id {plugin_id}");
             reload_plugin_with_id(plugin_id);
         }
         false
@@ -198,7 +198,7 @@ impl ZellijPlugin for Muxscroll {
     }
 }
 
-impl Muxscroll {
+impl ZmuxScroll {
     fn handle_custom_action(&mut self, action: CustomAction) {
         match action {
             CustomAction::ScrollAt(position) => self.handle_scroll_at(position),

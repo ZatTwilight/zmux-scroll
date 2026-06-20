@@ -1194,14 +1194,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9bb517913cfcfb9eeda59f36020269075a152701a01606c612f547e4890be399"
 
 [[package]]
-name = "muxscroll"
-version = "0.1.0"
-dependencies = [
- "zellij-tile",
- "zellij-utils",
-]
-
-[[package]]
 name = "names"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2667,3 +2659,11 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+
+[[package]]
+name = "zmux-scroll"
+version = "0.1.0"
+dependencies = [
+ "zellij-tile",
+ "zellij-utils",
+]
