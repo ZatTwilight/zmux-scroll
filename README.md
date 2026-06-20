@@ -5,47 +5,66 @@ Additionally:
 - it automatically switches to scroll mode when using the mouse wheel
 - Switches out of scroll mode when switching pane from a scrolled pane
 
-## Install / run
+## Install / use
 
-### Option 1: GitHub release URL
+`zmux-scroll` is intended to run as a background plugin. Install the WASM file somewhere stable, then add it to your Zellij config.
 
-From inside a Zellij session, load or reload the latest release directly from GitHub:
+### Option 1: Download a release
 
 ```sh
-zellij action start-or-reload-plugin \
-  "https://github.com/ZatTwilight/zmux-scroll/releases/latest/download/zmux-scroll.wasm"
+mkdir -p ~/.config/zellij/plugins
+curl -L \
+  https://github.com/ZatTwilight/zmux-scroll/releases/latest/download/zmux-scroll.wasm \
+  -o ~/.config/zellij/plugins/zmux-scroll.wasm
 ```
 
-To pin a specific version, use that release tag instead of `latest`:
+Then add this to your Zellij config:
+
+```kdl
+load_plugins {
+    "file:~/.config/zellij/plugins/zmux-scroll.wasm"
+}
+```
+
+Restart Zellij or start a new session, and the plugin should run in the background.
+
+To pin a specific version, use that release tag instead of `latest` when downloading:
 
 ```sh
-zellij action start-or-reload-plugin \
-  "https://github.com/ZatTwilight/zmux-scroll/releases/download/v0.1.0/zmux-scroll.wasm"
+curl -L \
+  https://github.com/ZatTwilight/zmux-scroll/releases/download/v0.1.0/zmux-scroll.wasm \
+  -o ~/.config/zellij/plugins/zmux-scroll.wasm
 ```
 
 ### Option 2: Local build
 
 ```sh
 cargo build --release --target wasm32-wasip1
+mkdir -p ~/.config/zellij/plugins
+cp target/wasm32-wasip1/release/zmux-scroll.wasm ~/.config/zellij/plugins/zmux-scroll.wasm
 ```
 
-The plugin artifact will be written to:
+Then use the same background plugin config:
 
-```text
-target/wasm32-wasip1/release/zmux-scroll.wasm
-```
-
-Then load it from inside a Zellij session:
-
-```sh
-zellij action start-or-reload-plugin \
-  "file:$PWD/target/wasm32-wasip1/release/zmux-scroll.wasm"
+```kdl
+load_plugins {
+    "file:~/.config/zellij/plugins/zmux-scroll.wasm"
+}
 ```
 
 Build with debug logging compiled in:
 
 ```sh
 cargo build --release --target wasm32-wasip1 --features debug-logs
+```
+
+### One-off reload while testing
+
+From inside a Zellij session, you can also manually start or reload the plugin:
+
+```sh
+zellij action start-or-reload-plugin \
+  "file:$PWD/target/wasm32-wasip1/release/zmux-scroll.wasm"
 ```
 
 ## Dev reload
