@@ -97,7 +97,7 @@ Debug logging is a compile-time feature (`debug-logs`), not a runtime plugin con
 
 ## Releases
 
-GitHub Actions builds the WASM artifact on pushes and pull requests. Pushing a version tag like `v0.1.0` creates or updates a GitHub release with:
+GitHub Actions runs only for version tag pushes. Pushing a SemVer-style version tag like `v0.1.0` creates or updates a GitHub release with:
 
 - `zmux-scroll.wasm`
 - `zmux-scroll.wasm.sha256`
